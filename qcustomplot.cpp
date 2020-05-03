@@ -8514,7 +8514,7 @@ void QCPAxis::setScaleRatio(const QCPAxis *otherAxis, double ratio)
   
   \see QCPAbstractPlottable::rescaleAxes, QCustomPlot::rescaleAxes
 */
-void QCPAxis::rescale(bool onlyVisiblePlottables)
+void QCPAxis::rescale(bool onlyVisiblePlottables, bool extraMargin)
 {
   QList<QCPAbstractPlottable*> p = plottables();
   QCPRange newRange;
@@ -8555,6 +8555,16 @@ void QCPAxis::rescale(bool onlyVisiblePlottables)
         newRange.lower = center/qSqrt(mRange.upper/mRange.lower);
         newRange.upper = center*qSqrt(mRange.upper/mRange.lower);
       }
+    }
+    //modifyed by xiangpu 2020-5-2
+    else
+    {
+        if(extraMargin)
+        {
+            double bandWidth=(newRange.upper-newRange.lower)/10;
+            newRange.lower-=bandWidth;
+            newRange.upper+=bandWidth;
+        }
     }
     setRange(newRange);
   }

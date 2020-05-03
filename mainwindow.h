@@ -29,7 +29,7 @@
 
 QT_CHARTS_USE_NAMESPACE
 namespace Ui {class MainWindow;class Status;}
-#define XRANGE 10000
+#define XRANGE 1000
 #define USE_ORIGINAL_DATA 1
 class Status
 {
@@ -53,7 +53,6 @@ public:
 private:
     void initStates();
     fileSaver *saver;
-    onlineVarian *onlineVarToTxt[6];
     allDataWindow *allwindow;
     Ui::MainWindow *ui;
     QPalette p;
@@ -66,7 +65,6 @@ private:
     QTimer *timer_plot;
     QTcpSocket *tcpClient;
     SerialPort *uart;
-    quint16 count;
     Status* status;
     int totalCharts=2;
     int totallines=4;
@@ -74,23 +72,20 @@ private:
     QVector<long long> PDataBuffer;
     QVector<QVector<double>> OriginalDataVec;
     QVector<QVector<double>> PDataVec;
-    QVector<int> chartLine[6];
     QVector<QCPGraph*> mGraphs;
     std::map<QString,int> findLineByName;
     std::map<int,int> line2Chart;
+    QVector<QVector<int>> chart2Line;
     QVector<QString> SeriesUnit;
     QVector<QString> SeriesName;
-    int mainGraph[6]={0};
-    int plotSelect=0,dataCnt=0;
-    double dataTotalSum[21]={0},dataTotalVariance[21]={0};
-    double data_calib[21]={0};
+    int plotSelect=0;
     int dx=0;double dx_len=2;
     int flashRate=1;
     int receive_data_cnt=0;
+    int receive_data_cnt_from_socket=0;
     QTimer *timer_data;
     double gra_accel=1;
-    double angle_xyz[3]={0};
-    onlineVarian *onlineVar[6];
+    QVector<onlineVarian*> onlineVar;
     stylePalette *linePalette;
     fftWindow *fftwin;
     fftLoader *fftloader;
@@ -105,6 +100,7 @@ private slots:
     void on_btnOpenGL_clicked();
     void on_btnConnect_clicked();
     void receiveDataSlot(QByteArray);
+    void receiveDataFromSocketSlot();
     void connectedSlot();
     void on_btnStart_clicked();
     void contextMenuRequest(QPoint);
@@ -113,7 +109,6 @@ private slots:
     void removeSelectedGraph();
     void removeAllGraphs();
     void selectionChanged();
-    void applyMainGraph();
     void setLineVisible();
 
     void on_btnFlash_clicked();

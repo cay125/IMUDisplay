@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1360</width>
-    <height>837</height>
+    <height>909</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -202,7 +202,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Factor</string>
+             <string>Remote IP</string>
             </property>
            </widget>
           </item>
@@ -292,7 +292,7 @@
            </font>
           </property>
           <property name="text">
-           <string>ChangeFactor</string>
+           <string>Connect Host</string>
           </property>
          </widget>
         </item>
