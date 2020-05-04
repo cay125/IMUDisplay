@@ -649,9 +649,11 @@ void MainWindow::on_btnFlash_clicked()
         fixedRange[i][0]=range[0].toInt();
         fixedRange[i][1]=range[1].toInt();
         if(isFixedRange)
+        {
             customplot[i]->yAxis->setRange(range[0].toInt(),range[1].toInt());
-        if(!status->isrunning)
-            customplot[i]->replot();
+            if(!status->isrunning)
+                customplot[i]->replot();
+        }
     }
 }
 
