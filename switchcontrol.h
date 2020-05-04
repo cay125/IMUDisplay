@@ -26,6 +26,8 @@ public:
     // 设置不可用颜色
     void setDisbaledColor(QColor color);
 
+    void setThumbColor(QColor color);
+
 protected:
     // 绘制开关
     void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;

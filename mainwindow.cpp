@@ -29,13 +29,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
         onlineVar.push_back(new onlineVarian());
     }
     SwitchControl *fileSwitchControl = new SwitchControl(this);
+    SwitchControl *rangeSwitchControl = new SwitchControl(this);
     // set switchcontrol style
     fileSwitchControl->setToggle(true);
     fileSwitchControl->setCheckedColor(QColor(0, 160, 230));
-    ui->speedSlider->setMinimumWidth(160);
+    fileSwitchControl->setThumbColor(QColor(0, 160, 230));
+    ui->speedSlider->setMinimumWidth(100);
     ui->hLayout->addWidget(fileSwitchControl);
+    rangeSwitchControl->setToggle(false);
+    rangeSwitchControl->setCheckedColor(QColor(0,230,160));
+    rangeSwitchControl->setThumbColor(QColor(0,230,160));
+    ui->hLayout->addWidget(rangeSwitchControl);
     saver=new fileSaver("record.txt", fileSwitchControl->isToggled());
     connect(fileSwitchControl, SIGNAL(toggled(bool)), saver, SLOT(isSave_slot(bool)));
+    connect(rangeSwitchControl,&SwitchControl::toggled,this,&MainWindow::isFixedRangeSlot);
     SeriesName.push_back("top pitch");
     SeriesName.push_back("top roll");
     SeriesName.push_back("bottom pitch");
@@ -81,8 +88,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     ui->ParityBox->addItem("Even");
     ui->ParityBox->addItem("None");
     ui->ParityBox->setCurrentIndex(2);
-    ui->FlashEdit->setText("1");
-    ui->FlashEdit->setValidator(new QIntValidator(0,1000));
+    //ui->FlashEdit->setText("1");
+    //ui->FlashEdit->setValidator(new QIntValidator(0,1000));
     ui->FlashEdit->setFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
     ui->GraEdit->setText("127.0.0.1");
     ui->GraEdit->setValidator(new QDoubleValidator());
@@ -145,6 +152,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     }
     for(int i=0;i<totalCharts;i++)
     {
+        fixedRange.push_back({-10,10});
+        ui->FlashEdit->setText(((ui->FlashEdit->text()=="")?(""):(ui->FlashEdit->text()+","))+QString::number(fixedRange[i][0])+":"+QString::number(fixedRange[i][1]));
         customplot[i]->axisRect()->axis(QCPAxis::atRight, 0)->setPadding(80); // add some padding to have space for tags
         customplot[i]->setInteractions(QCP::iSelectLegend | QCP::iSelectPlottables);
         customplot[i]->axisRect()->setupFullAxesBox();
@@ -161,7 +170,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
         customplot[i]->yAxis2->setVisible(true);
         customplot[i]->yAxis2->setTickLabels(false);
         customplot[i]->xAxis->setRange(0,XRANGE);
-        customplot[i]->yAxis->setRange(-10,10);
+        customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
         customplot[i]->xAxis->setTickLabels(false);
         customplot[i]->legend->setVisible(true);
         customplot[i]->legend->setFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
@@ -185,6 +194,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     timer_plot->setInterval(30);
 
     //initStates();
+}
+void MainWindow::isFixedRangeSlot(bool isToggled)
+{
+    isFixedRange=isToggled;
+    if(isFixedRange)
+    {
+        for(int i=0;i<totalCharts;i++)
+        {
+            customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
+            if(!status->isrunning)
+                customplot[i]->replot();
+        }
+    }
 }
 void MainWindow::selectionChanged()
 {
@@ -472,7 +494,8 @@ void MainWindow::timerSlot_customplot()
     }
     for(int i=0;i<totalCharts;i++)
     {
-        customplot[i]->yAxis->rescale(true,true);
+        if(!isFixedRange)
+            customplot[i]->yAxis->rescale(true,true);
         if((lastX[chart2Line[i][0]]+dx_len)>XRANGE && dataProcess[chart2Line[i][0]].size())
         {
             customplot[i]->xAxis->rescale();
@@ -598,15 +621,37 @@ void MainWindow::on_btnStart_clicked()
 
 void MainWindow::on_btnFlash_clicked()
 {
-    int trate=ui->FlashEdit->text().toInt();
-    if(trate>0 && trate<=1000)
+//    int trate=ui->FlashEdit->text().toInt();
+//    if(trate>0 && trate<=1000)
+//    {
+//        flashRate=trate;
+//        timer_data->setInterval((int)(1000.0/flashRate));
+//    }
+//    else
+//    {
+//        QMessageBox::information(this,"Warning","Invalid Input(flash rate should be larger than 0 and smaller than 1000)");
+//    }
+    QString range=ui->FlashEdit->text();
+    QStringList list=range.split(',');
+    for(int i=0;i<list.length();i++)
     {
-        flashRate=trate;
-        timer_data->setInterval((int)(1000.0/flashRate));
-    }
-    else
-    {
-        QMessageBox::information(this,"Warning","Invalid Input(flash rate should be larger than 0 and smaller than 1000)");
+        QStringList range=list[i].split(':');
+        if(range.length()!=2)
+        {
+            QMessageBox::information(this,"Warning","Invalid Input");
+            return;
+        }
+        if(i>=totalCharts)
+        {
+            QMessageBox::information(this,"Warning","Too Many Inputs");
+            return;
+        }
+        fixedRange[i][0]=range[0].toInt();
+        fixedRange[i][1]=range[1].toInt();
+        if(isFixedRange)
+            customplot[i]->yAxis->setRange(range[0].toInt(),range[1].toInt());
+        if(!status->isrunning)
+            customplot[i]->replot();
     }
 }
 
@@ -784,19 +829,23 @@ void MainWindow::receiveDataFromSocketSlot()
     }
     */
     auto data=tcpClient->readAll();
-    auto type=static_cast<recieveType>(data.at(0));
-    if(type==recieveType::angle)
+    int datalen=data.length()/7;
+    for(int i=0;i<datalen;i++)
     {
-        int16_t bottom_angleX=0,bottom_angleY=0,bottom_angleZ=0;
-        bottom_angleX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2))<<8)|static_cast<uint8_t>(data.at(1))));
-        bottom_angleY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4))<<8)|static_cast<uint8_t>(data.at(3))));
-        bottom_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6))<<8)|static_cast<uint8_t>(data.at(5))));
-        OriginalDataVec[2].push_back(bottom_angleX/32768.0*180.0);
-        OriginalDataVec[3].push_back(bottom_angleY/32768.0*180.0);
-        PData[2]=bottom_angleX;
-        PData[3]=bottom_angleY;
-        for(int i=2;i<4;i++)
-            PDataBuffer[i]+=PData[i];
-        receive_data_cnt_from_socket++;
+        auto type=static_cast<recieveType>(data.at(i*7));
+        if(type==recieveType::angle)
+        {
+            int16_t bottom_angleX=0,bottom_angleY=0,bottom_angleZ=0;
+            bottom_angleX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2+i*7))<<8)|static_cast<uint8_t>(data.at(1+i*7))));
+            bottom_angleY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4+i*7))<<8)|static_cast<uint8_t>(data.at(3+i*7))));
+            bottom_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6+i*7))<<8)|static_cast<uint8_t>(data.at(5+i*7))));
+            OriginalDataVec[2].push_back(bottom_angleX/32768.0*180.0);
+            OriginalDataVec[3].push_back(bottom_angleY/32768.0*180.0);
+            PData[2]=bottom_angleX;
+            PData[3]=bottom_angleY;
+            for(int j=2;j<4;j++)
+                PDataBuffer[j]+=PData[j];
+            receive_data_cnt_from_socket++;
+        }
     }
 }

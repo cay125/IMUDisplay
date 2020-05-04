@@ -152,3 +152,8 @@ void SwitchControl::setDisbaledColor(QColor color)
 {
     m_disabledColor = color;
 }
+
+void SwitchControl::setThumbColor(QColor color)
+{
+    m_thumbColor = color;
+}

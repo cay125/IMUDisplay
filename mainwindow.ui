@@ -158,7 +158,7 @@
              </font>
             </property>
             <property name="text">
-             <string>FlashRate(HZ)</string>
+             <string>Range</string>
             </property>
            </widget>
           </item>
@@ -310,7 +310,7 @@
            </font>
           </property>
           <property name="text">
-           <string>ChangeFlashRate</string>
+           <string>ChangeRange</string>
           </property>
          </widget>
         </item>

@@ -67,6 +67,7 @@ private:
     SerialPort *uart;
     Status* status;
     int totalCharts=2;
+    bool isFixedRange=false;
     int totallines=4;
     QVector<int> PData;
     QVector<long long> PDataBuffer;
@@ -78,6 +79,7 @@ private:
     QVector<QVector<int>> chart2Line;
     QVector<QString> SeriesUnit;
     QVector<QString> SeriesName;
+    QVector<QVector<int>> fixedRange;
     int plotSelect=0;
     int dx=0;double dx_len=2;
     int flashRate=1;
@@ -117,6 +119,7 @@ private slots:
     void paletteColorSlot(QColor);
     void addFFTplotSlot();
     void addAllDataSlot();
+    void isFixedRangeSlot(bool);
 
 signals:
     void startToConnectSignal(QString,int,int);
