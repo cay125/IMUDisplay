@@ -66,7 +66,7 @@ private:
     QTcpSocket *tcpClient;
     SerialPort *uart;
     Status* status;
-    int totalCharts=4;
+    int totalCharts=3;
     bool isFixedRange=false;
     int totallines=22;
     QVector<int> PData;

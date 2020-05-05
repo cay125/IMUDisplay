@@ -135,14 +135,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     line2Chart[1]=0;
     line2Chart[2]=1;
     line2Chart[3]=1;
+    QVector<bool> useRightAxis(totallines);
     for(int i=4;i<10;i++)
     {
         line2Chart[i]=2;
-        line2Chart[i+6]=3;
-        line2Chart[i+12]=3;
+        line2Chart[i+6]=1;
+        useRightAxis[i+6]=true;
+        line2Chart[i+12]=1;
+        useRightAxis[i+12]=true;
     }
     chart2Line.resize(totalCharts);
     QVector<int> cnt(totalCharts,0);
+    QVector<bool> isChartHaveRightAxis(totalCharts);
     for(int i=0;i<totallines;i++)
     {
         if(!line2Chart.count(i))
@@ -156,7 +160,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
             exit(1);
         }
         chart2Line[line2Chart[i]].push_back(i);
-        customplot[line2Chart[i]]->addGraph();
+        if(!useRightAxis[i])
+            customplot[line2Chart[i]]->addGraph();
+        else
+        {
+            isChartHaveRightAxis[line2Chart[i]]=true;
+            customplot[line2Chart[i]]->addGraph(customplot[line2Chart[i]]->xAxis,customplot[line2Chart[i]]->yAxis2);
+        }
         mGraphs[i]=customplot[line2Chart[i]]->graph();
         mGraphs[i]->setName(SeriesName[i]);
         mGraphs[i]->setPen(pen[(cnt[line2Chart[i]]++)%pen.size()]);
@@ -175,8 +185,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     }
     for(int i=0;i<totalCharts;i++)
     {
-        fixedRange.push_back({-10,10});
-        ui->FlashEdit->setText(((ui->FlashEdit->text()=="")?(""):(ui->FlashEdit->text()+","))+QString::number(fixedRange[i][0])+":"+QString::number(fixedRange[i][1]));
+        fixedRange.push_back({-10,10,-10,10});
+        //ui->FlashEdit->setText(((ui->FlashEdit->text()=="")?(""):(ui->FlashEdit->text()+","))+QString::number(fixedRange[i][0])+":"+QString::number(fixedRange[i][1]));
         customplot[i]->axisRect()->axis(QCPAxis::atRight, 0)->setPadding(80); // add some padding to have space for tags
         customplot[i]->setInteractions(QCP::iSelectLegend | QCP::iSelectPlottables);
         customplot[i]->axisRect()->setupFullAxesBox();
@@ -191,9 +201,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
         customplot[i]->xAxis2->setVisible(true);
         customplot[i]->xAxis2->setTickLabels(false);
         customplot[i]->yAxis2->setVisible(true);
-        customplot[i]->yAxis2->setTickLabels(false);
+        customplot[i]->yAxis2->setTickLabels(isChartHaveRightAxis[i]?true:false);
         customplot[i]->xAxis->setRange(0,XRANGE);
         customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
+        customplot[i]->yAxis2->setRange(fixedRange[i][2],fixedRange[i][3]);
         customplot[i]->xAxis->setTickLabels(false);
         customplot[i]->legend->setVisible(true);
         customplot[i]->legend->setFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
@@ -232,6 +243,7 @@ void MainWindow::isFixedRangeSlot(bool isToggled)
         for(int i=0;i<totalCharts;i++)
         {
             customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
+            customplot[i]->yAxis2->setRange(fixedRange[i][2],fixedRange[i][3]);
             if(!status->isrunning)
                 customplot[i]->replot();
         }
@@ -528,7 +540,10 @@ void MainWindow::timerSlot_customplot()
     for(int i=0;i<totalCharts;i++)
     {
         if(!isFixedRange)
+        {
             customplot[i]->yAxis->rescale(true,true);
+            customplot[i]->yAxis2->rescale(true,true);
+        }
         if((lastX[chart2Line[i][0]]+dx_len)>XRANGE && dataProcess[chart2Line[i][0]].size())
         {
             customplot[i]->xAxis->rescale();
@@ -627,6 +642,7 @@ void MainWindow::on_btnStart_clicked()
             fftData[i].clear();
             customplot[i]->xAxis->setRange(0,XRANGE);
             customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
+            customplot[i]->yAxis2->setRange(fixedRange[i][2],fixedRange[i][3]);
             customplot[i]->setInteraction(QCP::iRangeZoom,false);
             customplot[i]->setInteraction(QCP::iRangeDrag,false);
         }
@@ -654,38 +670,50 @@ void MainWindow::on_btnStart_clicked()
 
 void MainWindow::on_btnFlash_clicked()
 {
-//    int trate=ui->FlashEdit->text().toInt();
-//    if(trate>0 && trate<=1000)
-//    {
-//        flashRate=trate;
-//        timer_data->setInterval((int)(1000.0/flashRate));
-//    }
-//    else
-//    {
-//        QMessageBox::information(this,"Warning","Invalid Input(flash rate should be larger than 0 and smaller than 1000)");
-//    }
     QString range=ui->FlashEdit->text();
     QStringList list=range.split(',');
     for(int i=0;i<list.length();i++)
     {
-        QStringList range=list[i].split(':');
+        QStringList index_and_range=list[i].split('@');
+        if(index_and_range.size()!=2)
+        {
+            QMessageBox::information(this,"Warning","Invalid Input");
+            return;
+        }
+        auto dir=index_and_range[0].back();
+        int index=index_and_range[0].mid(0,index_and_range[0].length()-1).toInt();
+        QStringList range=index_and_range[1].split(':');
         if(range.length()!=2)
         {
             QMessageBox::information(this,"Warning","Invalid Input");
             return;
         }
-        if(i>=totalCharts)
+        if(index>=totalCharts)
         {
             QMessageBox::information(this,"Warning","Too Many Inputs");
             return;
         }
-        fixedRange[i][0]=range[0].toInt();
-        fixedRange[i][1]=range[1].toInt();
-        if(isFixedRange)
+        if(dir=='l')
         {
-            customplot[i]->yAxis->setRange(range[0].toInt(),range[1].toInt());
-            if(!status->isrunning)
-                customplot[i]->replot();
+            fixedRange[index][0]=range[0].toInt();
+            fixedRange[index][1]=range[1].toInt();
+            if(isFixedRange)
+            {
+                customplot[index]->yAxis->setRange(range[0].toInt(),range[1].toInt());
+                if(!status->isrunning)
+                    customplot[index]->replot();
+            }
+        }
+        else if(dir=='r')
+        {
+            fixedRange[index][2]=range[0].toInt();
+            fixedRange[index][3]=range[1].toInt();
+            if(isFixedRange)
+            {
+                customplot[index]->yAxis2->setRange(range[0].toInt(),range[1].toInt());
+                if(!status->isrunning)
+                    customplot[index]->replot();
+            }
         }
     }
 }

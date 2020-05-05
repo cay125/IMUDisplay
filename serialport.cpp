@@ -97,18 +97,18 @@ void SerialPort::handle_data()
                 state.first=0;
                 if(state.second==recieveType::angle)
                     emit receiveDataSignal(pointData);
-                if(!first_flag)
-                {
-                    first_flag=true;
-                    t_time=std::chrono::steady_clock::now();
-                }
-                else
-                {
-                    auto current_time=std::chrono::steady_clock::now();
-                    std::chrono::duration<double, std::milli> dTimeSpan = std::chrono::duration<double,std::milli>(current_time-t_time);
-                    qDebug()<<"ms count: "<<dTimeSpan.count();
-                    t_time=current_time;
-                }
+//                if(!first_flag)
+//                {
+//                    first_flag=true;
+//                    t_time=std::chrono::steady_clock::now();
+//                }
+//                else
+//                {
+//                    auto current_time=std::chrono::steady_clock::now();
+//                    std::chrono::duration<double, std::milli> dTimeSpan = std::chrono::duration<double,std::milli>(current_time-t_time);
+//                    qDebug()<<"ms count: "<<dTimeSpan.count();
+//                    t_time=current_time;
+//                }
             }
         }
     }
