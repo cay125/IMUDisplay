@@ -66,9 +66,9 @@ private:
     QTcpSocket *tcpClient;
     SerialPort *uart;
     Status* status;
-    int totalCharts=2;
+    int totalCharts=4;
     bool isFixedRange=false;
-    int totallines=4;
+    int totallines=22;
     QVector<int> PData;
     QVector<long long> PDataBuffer;
     QVector<QVector<double>> OriginalDataVec;
@@ -92,9 +92,9 @@ private:
     fftWindow *fftwin;
     fftLoader *fftloader;
     QThread *fft_thread;
-    QVector<double> fftData[6];
-    bool isfftTransfer[6]={false};
-    bool isShowALLData[6]={false};
+    QVector<QVector<double>> fftData;
+    QVector<bool> isfftTransfer;
+    QVector<bool> isShowALLData;
 private slots:
     void timerSlot_data();
     void timerSlot_customplot();

@@ -43,10 +43,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     saver=new fileSaver("record.txt", fileSwitchControl->isToggled());
     connect(fileSwitchControl, SIGNAL(toggled(bool)), saver, SLOT(isSave_slot(bool)));
     connect(rangeSwitchControl,&SwitchControl::toggled,this,&MainWindow::isFixedRangeSlot);
-    SeriesName.push_back("top pitch");
-    SeriesName.push_back("top roll");
-    SeriesName.push_back("bottom pitch");
-    SeriesName.push_back("bottom roll");
+    SeriesName.resize(totallines);
+    SeriesName[0]="top pitch";
+    SeriesName[1]="top roll";
+    SeriesName[2]="bottom pitch";
+    SeriesName[3]="bottom roll";
+    for(int i=4;i<10;i++)
+    {
+        SeriesName[i]="pid out"+QString::number(i-4);
+        SeriesName[i+6]="real leg"+QString::number(i-4);
+        SeriesName[i+12]="ref leg"+QString::number(i-4);
+    }
     for(int i=0;i<totallines;i++)
     {
         dataEdit.push_back(new QLineEdit());
@@ -103,7 +110,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     connect(uart,&SerialPort::connectedSignal,this,&MainWindow::connectedSlot,Qt::QueuedConnection);
     connect(this,&MainWindow::uartCloseSignal,uart,&SerialPort::uartCloseSlot);
 
-    QPen pen[9];
+    QVector<QPen> pen(9);
     pen[0].setColor(QColor(0xfa, 0x78, 0x00));
     pen[1].setColor(QColor(0x00, 0x84, 0x3c));
     pen[2].setColor(QColor(0xff, 0x00, 0x00));
@@ -128,15 +135,31 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     line2Chart[1]=0;
     line2Chart[2]=1;
     line2Chart[3]=1;
+    for(int i=4;i<10;i++)
+    {
+        line2Chart[i]=2;
+        line2Chart[i+6]=3;
+        line2Chart[i+12]=3;
+    }
     chart2Line.resize(totalCharts);
     QVector<int> cnt(totalCharts,0);
     for(int i=0;i<totallines;i++)
     {
+        if(!line2Chart.count(i))
+        {
+            qDebug()<<"every line must belong to one chart";
+            exit(1);
+        }
+        if(line2Chart[i]>=totalCharts)
+        {
+            qDebug()<<"to many charts";
+            exit(1);
+        }
         chart2Line[line2Chart[i]].push_back(i);
         customplot[line2Chart[i]]->addGraph();
         mGraphs[i]=customplot[line2Chart[i]]->graph();
         mGraphs[i]->setName(SeriesName[i]);
-        mGraphs[i]->setPen(pen[cnt[line2Chart[i]]++]);
+        mGraphs[i]->setPen(pen[(cnt[line2Chart[i]]++)%pen.size()]);
         QCPSelectionDecorator *decorator=new QCPSelectionDecorator();
         QPen tpen;
         tpen.setColor(mGraphs[i]->pen().color());
@@ -181,6 +204,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     PDataVec.resize(totallines);
     PDataBuffer.resize(totallines);
     OriginalDataVec.resize(totallines);
+    fftData.resize(totallines);
+    for(int i=0;i<totallines;i++)
+    {
+        isfftTransfer.push_back(false);
+        isShowALLData.push_back(false);
+    }
 
     connect(timer_plot, SIGNAL(timeout()), this, SLOT(timerSlot_customplot()));
     connect(timer_data, SIGNAL(timeout()), this, SLOT(timerSlot_data()));
@@ -190,7 +219,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     connect(fftwin,SIGNAL(fftNum_signal(int)),fftloader,SLOT(fftNum_slot(int)));
 
     timer_data->setInterval(static_cast<int>((1000.0/flashRate)));
-    timer_data->start();
+    //timer_data->start();
     timer_plot->setInterval(30);
 
     //initStates();
@@ -348,6 +377,10 @@ void MainWindow::receiveDataSlot(QByteArray data)
     }
     OriginalDataVec[0].push_back(top_angleX/32768.0*180.0);
     OriginalDataVec[1].push_back(top_angleY/32768.0*180.0);
+    QVector<QString> dataToTxt;
+    dataToTxt.append(QString::number(OriginalDataVec[0].back(),'f',3));
+    dataToTxt.append(QString::number(OriginalDataVec[1].back(),'f',3));
+    saver->writeText(dataToTxt);
     PData[0]=top_angleX;
     PData[1]=top_angleY;
     for(int i=0;i<2;i++)
@@ -593,7 +626,7 @@ void MainWindow::on_btnStart_clicked()
         {
             fftData[i].clear();
             customplot[i]->xAxis->setRange(0,XRANGE);
-            customplot[i]->yAxis->setRange(-10,10);
+            customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
             customplot[i]->setInteraction(QCP::iRangeZoom,false);
             customplot[i]->setInteraction(QCP::iRangeDrag,false);
         }
@@ -831,18 +864,25 @@ void MainWindow::receiveDataFromSocketSlot()
     }
     */
     auto data=tcpClient->readAll();
-    int datalen=data.length()/7;
+    int dataSize=1+6+6+12+12;
+    int datalen=data.length()/dataSize;
     for(int i=0;i<datalen;i++)
     {
-        auto type=static_cast<recieveType>(data.at(i*7));
+        auto type=static_cast<recieveType>(data.at(i*dataSize));
         if(type==recieveType::angle)
         {
             int16_t bottom_angleX=0,bottom_angleY=0,bottom_angleZ=0;
-            bottom_angleX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2+i*7))<<8)|static_cast<uint8_t>(data.at(1+i*7))));
-            bottom_angleY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4+i*7))<<8)|static_cast<uint8_t>(data.at(3+i*7))));
-            bottom_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6+i*7))<<8)|static_cast<uint8_t>(data.at(5+i*7))));
+            bottom_angleX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2+i*dataSize))<<8)|static_cast<uint8_t>(data.at(1+i*dataSize))));
+            bottom_angleY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4+i*dataSize))<<8)|static_cast<uint8_t>(data.at(3+i*dataSize))));
+            bottom_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6+i*dataSize))<<8)|static_cast<uint8_t>(data.at(5+i*dataSize))));
             OriginalDataVec[2].push_back(bottom_angleX/32768.0*180.0);
             OriginalDataVec[3].push_back(bottom_angleY/32768.0*180.0);
+            for(int j=0;j<6;j++)
+            {
+                OriginalDataVec[j+4].push_back(static_cast<int8_t>(data.at(j+7+i*dataSize)));
+                OriginalDataVec[j+10].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+13+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+14+i*dataSize))));
+                OriginalDataVec[j+16].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+25+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+26+i*dataSize))));
+            }
             PData[2]=bottom_angleX;
             PData[3]=bottom_angleY;
             for(int j=2;j<4;j++)
