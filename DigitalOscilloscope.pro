@@ -33,6 +33,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         alldatawindow.cpp \
         axistag.cpp \
+        datamanagerwindow.cpp \
         fftloader.cpp \
         fftwindow.cpp \
         filesaver.cpp \
@@ -47,6 +48,7 @@ SOURCES += \
 HEADERS += \
         alldatawindow.h \
         axistag.h \
+        datamanagerwindow.h \
         fftloader.h \
         fftw3.h \
         fftwindow.h \
@@ -60,6 +62,7 @@ HEADERS += \
 
 FORMS += \
         alldatawindow.ui \
+        datamanagerwindow.ui \
         fftwindow.ui \
         mainwindow.ui
 

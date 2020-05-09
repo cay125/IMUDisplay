@@ -315,6 +315,18 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btnManager">
+          <property name="font">
+           <font>
+            <family>Microsoft YaHei</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>DataManager</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="hLayout">
           <item>
            <widget class="QSlider" name="speedSlider">
@@ -358,14 +370,14 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>218</width>
-           <height>449</height>
+           <width>201</width>
+           <height>820</height>
           </rect>
          </property>
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>200</height>
+           <height>820</height>
           </size>
          </property>
          <widget class="QWidget" name="verticalLayoutWidget_2">

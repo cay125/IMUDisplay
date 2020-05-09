@@ -26,6 +26,7 @@
 #include "fftloader.h"
 #include "filesaver.h"
 #include "alldatawindow.h"
+#include "datamanagerwindow.h"
 
 QT_CHARTS_USE_NAMESPACE
 namespace Ui {class MainWindow;class Status;}
@@ -54,6 +55,7 @@ private:
     void initStates();
     fileSaver *saver;
     allDataWindow *allwindow;
+    dataManagerWindow * managerWindow;
     Ui::MainWindow *ui;
     QPalette p;
     QVector<QCustomPlot*> customplot;
@@ -121,6 +123,7 @@ private slots:
     void addAllDataSlot();
     void isFixedRangeSlot(bool);
 
+    void on_btnManager_clicked();
 signals:
     void startToConnectSignal(QString,int,int);
     void uartCloseSignal();

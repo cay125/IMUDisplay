@@ -3,7 +3,7 @@
 #include "serialport.h"
 #include <QSerialPortInfo>
 #include "switchcontrol.h"
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status),ui(new Ui::MainWindow),timer_plot(new QTimer),timer_data(new QTimer),linePalette(new stylePalette),fftwin(new fftWindow(parent)),fftloader(new fftLoader()),allwindow(new allDataWindow(parent))
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status),ui(new Ui::MainWindow),timer_plot(new QTimer),timer_data(new QTimer),linePalette(new stylePalette),fftwin(new fftWindow(parent)),fftloader(new fftLoader()),allwindow(new allDataWindow(parent)),managerWindow(new dataManagerWindow(parent))
 {
     //showMaximized();
     //set white background color
@@ -800,6 +800,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     fileToColor.close();
     fftwin->close();
     allwindow->close();
+    managerWindow->close();
 }
 void MainWindow::initStates()
 {
@@ -918,4 +919,9 @@ void MainWindow::receiveDataFromSocketSlot()
             receive_data_cnt_from_socket++;
         }
     }
+}
+
+void MainWindow::on_btnManager_clicked()
+{
+    managerWindow->show();
 }
