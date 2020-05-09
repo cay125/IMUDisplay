@@ -124,6 +124,7 @@ private slots:
     void isFixedRangeSlot(bool);
 
     void on_btnManager_clicked();
+    void dataManagerSlot(std::map<QString,dataManager>);
 signals:
     void startToConnectSignal(QString,int,int);
     void uartCloseSignal();

@@ -3,6 +3,7 @@
 #include <QPalette>
 #include <QString>
 #include <QLayout>
+#include <QMessageBox>
 
 dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::dataManagerWindow)
 {
@@ -33,6 +34,7 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
         groups.back()->setExclusive(false);
         groups.push_back(new QButtonGroup);
         spinIntBoxs.push_back(new QSpinBox);
+        spinIntBoxs.back()->setValue(0);
         Hlayout->addWidget(spinIntBoxs.back());
         for(int j=0;j<2;j++)
         {
@@ -44,11 +46,32 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
     ui->mainLayout->setRowStretch(totalNum,1);
     btnBox=new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     ui->mainLayout->addWidget(btnBox,totalNum+1,0);
-    connect(btnBox,&QDialogButtonBox::accepted,this,[](){
-
+    connect(btnBox,&QDialogButtonBox::accepted,this,[this]()
+    {
+        int cnt=0;
+        std::map<QString,dataManager> data;
+        for(int i=0;i<totalNum;i++)
+        {
+            if(radios[i*3]->isChecked())
+            {
+                cnt++;
+                dataManager d(radios[i*3+2]->isChecked(),spinIntBoxs[i]->value());
+                data.insert(std::pair<QString,dataManager>(radios[i*3]->text(),d));
+            }
+        }
+        if(cnt)
+        {
+            emit dataManagerSignal(data);
+            close();
+        }
+        else
+        {
+            QMessageBox::information(this,"Warning","Invalid Input");
+        }
     });
-    connect(btnBox,&QDialogButtonBox::rejected,this,[](){
-
+    connect(btnBox,&QDialogButtonBox::rejected,this,[this]()
+    {
+        close();
     });
 }
 

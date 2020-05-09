@@ -228,6 +228,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     connect(this, SIGNAL(FFTstart_signal(QVariant,QString)), fftloader,SLOT(FFTstart_slot(QVariant,QString)));
     connect(fftloader,SIGNAL(FFTfinished_signal(QVariant,QString)),fftwin,SLOT(FFTfinished_slot(QVariant,QString)));
     connect(fftwin,SIGNAL(fftNum_signal(int)),fftloader,SLOT(fftNum_slot(int)));
+    connect(managerWindow,&dataManagerWindow::dataManagerSignal,this,&MainWindow::dataManagerSlot);
 
     timer_data->setInterval(static_cast<int>((1000.0/flashRate)));
     //timer_data->start();
@@ -787,17 +788,17 @@ void MainWindow::addAllDataSlot()
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    QFile fileToColor("configs.ini");
-    fileToColor.open(QIODevice::WriteOnly | QIODevice::Text);
-    QTextStream stream(&fileToColor);
-    for(int i=0;i<3;i++)
-    {
-        QColor color=mGraphs[i]->pen().color();
-        int red=color.red(),green=color.green(),blue=color.blue();
-        stream<<red<<" "<<green<<" "<<blue<<endl;
-    }
-    stream<<ui->speedSlider->value()<<endl;
-    fileToColor.close();
+//    QFile fileToColor("configs.ini");
+//    fileToColor.open(QIODevice::WriteOnly | QIODevice::Text);
+//    QTextStream stream(&fileToColor);
+//    for(int i=0;i<3;i++)
+//    {
+//        QColor color=mGraphs[i]->pen().color();
+//        int red=color.red(),green=color.green(),blue=color.blue();
+//        stream<<red<<" "<<green<<" "<<blue<<endl;
+//    }
+//    stream<<ui->speedSlider->value()<<endl;
+//    fileToColor.close();
     fftwin->close();
     allwindow->close();
     managerWindow->close();
@@ -924,4 +925,130 @@ void MainWindow::receiveDataFromSocketSlot()
 void MainWindow::on_btnManager_clicked()
 {
     managerWindow->show();
+}
+
+void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
+{
+    QVector<QPen> pen(9);
+    pen[0].setColor(QColor(0xfa, 0x78, 0x00));
+    pen[1].setColor(QColor(0x00, 0x84, 0x3c));
+    pen[2].setColor(QColor(0xff, 0x00, 0x00));
+    pen[8].setColor(QColor(0x00, 0x66, 0xff));
+    pen[7].setColor(QColor(0xff, 0x77, 0xff));
+    pen[5].setColor(QColor(0xda, 0xa5, 0x20));
+    pen[6].setColor(QColor(0xff, 0x14, 0x93));
+    pen[4].setColor(QColor(0x80, 0x80, 0x00));
+    pen[3].setColor(QColor(0x22, 0x8b, 0x22));
+
+
+    for(int i=0;i<totalCharts;i++)
+    {
+        ui->mainLayout->removeWidget(customplot[i]);
+        customplot[i]->clearGraphs();
+        customplot[i]->clearItems();
+        customplot[i]->clearPlottables();
+        customplot[i]->deleteLater();
+    }
+    for(int i=0;i<totallines;i++)
+        mTags[i]->deleteLater();
+    mTags.clear();
+    mGraphs.clear();
+    line2Chart.clear();
+    chart2Line.clear();
+    customplot.clear();
+    fixedRange.clear();
+    int _max=0;
+    for(auto it=data.begin();it!=data.end();it++)
+        if(it->second.chartIndex>_max)
+            _max=it->second.chartIndex;
+    totalCharts=_max+1;
+    for(int i=0;i<totalCharts;i++)
+    {
+        customplot.push_back(new QCustomPlot(this));
+        ui->mainLayout->addWidget(customplot.back());
+    }
+    chart2Line.resize(totalCharts);
+    QVector<int> cnt(totalCharts);
+    QVector<bool> isChartHaveRightAxis(totalCharts);
+    QVector<bool> isChartHaveLeftAxis(totalCharts);
+    totallines=0;
+    for(auto it=data.begin();it!=data.end();it++)
+    {
+        QVector<QString> sName;
+        int currentLineSize=mGraphs.size();
+        if(it->first=="Top IMU")
+            sName={"top pitch","top bottom"};
+        else if(it->first=="Bottom IMU")
+            sName={"bottom pitch","bottom bottom"};
+        else if(it->first=="PID out")
+            for(int i=0;i<6;i++)
+                sName.push_back("pid out "+QString::number(i));
+        else if(it->first=="Ref Legs")
+            for(int i=0;i<6;i++)
+                sName.push_back("Ref Legs "+QString::number(i));
+        else if(it->first=="Real Legs")
+            for(int i=0;i<6;i++)
+                sName.push_back("Real Legs "+QString::number(i));
+        else if(it->first=="Real gyro")
+            sName={"gyroX","gyroY","gyroZ"};
+        else if(it->first=="Ref Leg Speed")
+            for(int i=0;i<6;i++)
+                sName.push_back("Ref Leg Vel "+QString::number(i));
+        totallines+=sName.size();
+        for(int i=currentLineSize;i<currentLineSize+sName.size();i++)
+        {
+            line2Chart[i]=it->second.chartIndex;
+            chart2Line[line2Chart[i]].push_back(i);
+            if(!it->second.isRightAxis)
+            {
+                isChartHaveLeftAxis[line2Chart[i]]=true;
+                customplot[line2Chart[i]]->addGraph();
+            }
+            else
+            {
+                isChartHaveRightAxis[line2Chart[i]]=true;
+                customplot[line2Chart[i]]->addGraph(customplot[line2Chart[i]]->xAxis,customplot[line2Chart[i]]->yAxis2);
+            }
+            mGraphs.push_back(customplot[line2Chart[i]]->graph());
+            mGraphs[i]->setName(sName[i-currentLineSize]);
+            mGraphs[i]->setPen(pen[(cnt[line2Chart[i-currentLineSize]]++)%pen.size()]);
+            QCPSelectionDecorator *decorator=new QCPSelectionDecorator();
+            QPen tpen;
+            tpen.setColor(mGraphs[i]->pen().color());
+            tpen.setWidth(2);
+            decorator->setPen(tpen);
+            mGraphs[i]->setSelectionDecorator(decorator);
+            mTags.push_back(new AxisTag(mGraphs[i]->valueAxis()));
+            mTags[i]->setPen(mGraphs[i]->pen());
+            mTags[i]->setText("0");
+        }
+    }
+    for(int i=0;i<totalCharts;i++)
+    {
+        fixedRange.push_back({-10,10,-10,10});
+        customplot[i]->axisRect()->axis(QCPAxis::atRight, 0)->setPadding(80); // add some padding to have space for tags
+        customplot[i]->setInteractions(QCP::iSelectLegend | QCP::iSelectPlottables);
+        customplot[i]->axisRect()->setupFullAxesBox();
+        customplot[i]->legend->setSelectedFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
+        customplot[i]->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
+        // connect some interaction slots:
+        connect(customplot[i], SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
+        connect(customplot[i], SIGNAL(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*)));
+        customplot[i]->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(customplot[i], SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequest(QPoint)));
+
+        customplot[i]->xAxis2->setVisible(true);
+        customplot[i]->xAxis2->setTickLabels(false);
+        customplot[i]->yAxis2->setVisible(true);
+        customplot[i]->yAxis2->setTickLabels(isChartHaveRightAxis[i]?true:false);
+        customplot[i]->xAxis->setRange(0,XRANGE);
+        customplot[i]->xAxis->setTickLabels(false);
+        customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
+        customplot[i]->yAxis->setTickLabels(isChartHaveLeftAxis[i]?true:false);
+        customplot[i]->yAxis2->setRange(fixedRange[i][2],fixedRange[i][3]);
+        customplot[i]->legend->setVisible(true);
+        customplot[i]->legend->setFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
+        customplot[i]->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignLeft);
+        ui->mainLayout->addWidget(customplot[i],i,0);
+    }
 }

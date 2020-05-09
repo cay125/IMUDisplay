@@ -7,11 +7,19 @@
 #include <QSpinBox>
 #include <QRadioButton>
 #include <QDialogButtonBox>
+#include <map>
 
 namespace Ui {
 class dataManagerWindow;
 }
 
+class dataManager
+{
+public:
+    bool isRightAxis=false;
+    int chartIndex=0;
+    dataManager(bool _isRightAxis,int _chartIndex){isRightAxis=_isRightAxis;chartIndex=_chartIndex;}
+};
 class dataManagerWindow : public QMainWindow
 {
     Q_OBJECT
@@ -27,6 +35,8 @@ private:
     QVector<QSpinBox*> spinIntBoxs;
     QDialogButtonBox* btnBox;
     int totalNum=7;
+signals:
+    void dataManagerSignal(std::map<QString,dataManager>);
 };
 
 #endif // DATAMANAGERWINDOW_H
