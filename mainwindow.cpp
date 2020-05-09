@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     });
 
     qDebug()<< "mainwindow work on thread id = " << QThread::currentThreadId();
-    for(int i=0;i<totallines;i++)
+    for(int i=0;i<totalData;i++)
     {
         onlineVar.push_back(new onlineVarian());
     }
@@ -122,10 +122,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
         customplot.push_back(new QCustomPlot(this));
     for(int i=0;i<totallines;i++)
         mGraphs.push_back(nullptr);
-    findLineByName["top_pitch"]=0;
-    findLineByName["top_roll"]=1;
-    findLineByName["bottom_pitch"]=2;
-    findLineByName["bottom_roll"]=3;
 
     for(int i=0;i<totallines;i++)
         SeriesUnit.push_back("deg");
@@ -147,6 +143,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     QVector<bool> isChartHaveRightAxis(totalCharts);
     for(int i=0;i<totallines;i++)
     {
+        line2Data[i]=i;
         if(!line2Chart.count(i))
         {
             qDebug()<<"every line must belong to one chart";
@@ -209,10 +206,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
         customplot[i]->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignLeft);
         ui->mainLayout->addWidget(customplot[i],i,0);
     }
-    PData.resize(totallines);
-    PDataVec.resize(totallines);
-    PDataBuffer.resize(totallines);
-    OriginalDataVec.resize(totallines);
+    PData.resize(totalData);
+    PDataVec.resize(totalData);
+    PDataBuffer.resize(totalData);
+    OriginalDataVec.resize(totalData);
 
     connect(timer_plot, SIGNAL(timeout()), this, SLOT(timerSlot_customplot()));
     connect(timer_data, SIGNAL(timeout()), this, SLOT(timerSlot_data()));
@@ -224,6 +221,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     timer_plot->setInterval(30);
 
     //initStates();
+}
+void MainWindow::removeStrech(QBoxLayout* layout)
+{
+    for (int i = 0; i < layout->count(); i++)
+    {
+        QLayoutItem *layoutItem = layout->itemAt(i);
+        if(layoutItem->spacerItem())
+        {
+            layout->removeItem(layoutItem);
+            i--;
+        }
+    }
 }
 void MainWindow::isFixedRangeSlot(bool isToggled)
 {
@@ -448,15 +457,15 @@ void MainWindow::timerSlot_customplot()
         lastX[cnt]=index>=0?mGraphs[cnt]->dataMainKey(index):0;
         // calculate and add a new data point to each graph:
         QVector<double> xPos;
-        int len=dataProcess[cnt].size();
+        int len=dataProcess[line2Data[cnt]].size();
         if(len!=0)
         {
             for(int j=1;j<=len;j++)
             {
                 xPos.append(j*dx_len/len+lastX[cnt]);
             }
-            mGraphs[cnt]->addData(xPos,dataProcess[cnt]);
-            onlineVar[cnt]->addData(dataProcess[cnt]);
+            mGraphs[cnt]->addData(xPos,dataProcess[line2Data[cnt]]);
+            onlineVar[cnt]->addData(dataProcess[line2Data[cnt]]);
             //onlineVarToTxt[cnt]->addData(PDataVec[cnt]);
         }
         else
@@ -484,14 +493,14 @@ void MainWindow::timerSlot_customplot()
     {
         for(int cnt=0;cnt<totallines;cnt++)
         {
-            if(dataProcess[cnt].size()!=0)
-                dataEdit[cnt]->setText(QString::number(dataProcess[cnt].back(),'f',4));
+            if(dataProcess[line2Data[cnt]].size()!=0)
+                dataEdit[cnt]->setText(QString::number(dataProcess[line2Data[cnt]].back(),'f',4));
         }
         dataTextUpdateCnt=0;
     }
     for(int i=0;i<totallines;i++)
     {
-        if(dataProcess[i].size()!=0)
+        if(dataProcess[line2Data[i]].size()!=0)
         {
             //mGraphs[i]->rescaleValueAxis(false,true);
             double graphValue;
@@ -519,7 +528,7 @@ void MainWindow::timerSlot_customplot()
             customplot[i]->yAxis->rescale(true,true);
             customplot[i]->yAxis2->rescale(true,true);
         }
-        if((lastX[chart2Line[i][0]]+dx_len)>XRANGE && dataProcess[chart2Line[i][0]].size())
+        if((lastX[chart2Line[i][0]]+dx_len)>XRANGE && dataProcess[line2Data[chart2Line[i][0]]].size())
         {
             customplot[i]->xAxis->rescale();
             customplot[i]->xAxis->setRange(customplot[i]->xAxis->range().upper, XRANGE, Qt::AlignRight);
@@ -604,9 +613,13 @@ void MainWindow::on_btnStart_clicked()
         for(int i=0;i<totallines;i++)
         {
             mGraphs[i]->data()->clear();
+        }
+        for(int i=0;i<totalData;i++)
+        {
             PDataVec[i].clear();
             PData[i]=0;
             PDataBuffer[i]=0;
+            OriginalDataVec[i].clear();
             onlineVar[i]->clearData();
         }
         receive_data_cnt=0;
@@ -747,7 +760,7 @@ void MainWindow::initStates()
 void MainWindow::receiveDataFromSocketSlot()
 {
     auto data=tcpClient->readAll();
-    int dataSize=1+6+6+12+12;
+    int dataSize=1+6+6+12+12+24+1+6;
     int datalen=data.length()/dataSize;
     for(int i=0;i<datalen;i++)
     {
@@ -765,7 +778,14 @@ void MainWindow::receiveDataFromSocketSlot()
                 OriginalDataVec[j+4].push_back(static_cast<int8_t>(data.at(j+7+i*dataSize)));
                 OriginalDataVec[j+10].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+13+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+14+i*dataSize))));
                 OriginalDataVec[j+16].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+25+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+26+i*dataSize))));
+                OriginalDataVec[j+22].push_back(static_cast<int32_t>(static_cast<uint8_t>(data.at(j*4+37+i*dataSize))<<24|static_cast<uint8_t>(data.at(j*4+38+i*dataSize))<<16|static_cast<uint8_t>(data.at(j*4+39+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*4+40+i*dataSize))));
             }
+            double gyroX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(63))<<8)|static_cast<uint8_t>(data.at(62))))/32768.0*2000.0;
+            double gyroY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(65))<<8)|static_cast<uint8_t>(data.at(64))))/32768.0*2000.0;
+            double gyroZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(67))<<8)|static_cast<uint8_t>(data.at(66))))/32768.0*2000.0;
+            OriginalDataVec[28].push_back(gyroX);
+            OriginalDataVec[29].push_back(gyroY);
+            OriginalDataVec[30].push_back(gyroZ);
             PData[2]=bottom_angleX;
             PData[3]=bottom_angleY;
             for(int j=2;j<4;j++)
@@ -803,13 +823,22 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
         customplot[i]->deleteLater();
     }
     for(int i=0;i<totallines;i++)
+    {
+        dataEdit[i]->deleteLater();
+        dataLabel[i]->deleteLater();
         mTags[i]->deleteLater();
+    }
+    dataEdit.clear();
+    dataLabel.clear();
     mTags.clear();
     mGraphs.clear();
     line2Chart.clear();
+    line2Data.clear();
     chart2Line.clear();
     customplot.clear();
     fixedRange.clear();
+    removeStrech(ui->lineLayout);
+    removeStrech(ui->labelLayout);
     int _max=0;
     for(auto it=data.begin();it!=data.end();it++)
         if(it->second.chartIndex>_max)
@@ -828,28 +857,42 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
     for(auto it=data.begin();it!=data.end();it++)
     {
         QVector<QString> sName;
+        int dataIndexStart=0;
         int currentLineSize=mGraphs.size();
         if(it->first=="Top IMU")
-            sName={"top pitch","top bottom"};
+        {sName={"top pitch","top bottom"};dataIndexStart=0;}
         else if(it->first=="Bottom IMU")
-            sName={"bottom pitch","bottom bottom"};
+        {sName={"bottom pitch","bottom bottom"};dataIndexStart=2;}
         else if(it->first=="PID out")
+        {
             for(int i=0;i<6;i++)
                 sName.push_back("pid out "+QString::number(i));
+            dataIndexStart=4;
+        }
         else if(it->first=="Ref Legs")
+        {
             for(int i=0;i<6;i++)
                 sName.push_back("Ref Legs "+QString::number(i));
+            dataIndexStart=16;
+        }
         else if(it->first=="Real Legs")
+        {
             for(int i=0;i<6;i++)
                 sName.push_back("Real Legs "+QString::number(i));
+            dataIndexStart=10;
+        }
         else if(it->first=="Real gyro")
-            sName={"gyroX","gyroY","gyroZ"};
+        {sName={"gyroX","gyroY","gyroZ"};dataIndexStart=28;}
         else if(it->first=="Ref Leg Speed")
+        {
             for(int i=0;i<6;i++)
                 sName.push_back("Ref Leg Vel "+QString::number(i));
+            dataIndexStart=22;
+        }
         totallines+=sName.size();
         for(int i=currentLineSize;i<currentLineSize+sName.size();i++)
         {
+            line2Data[i]=dataIndexStart++;
             line2Chart[i]=it->second.chartIndex;
             chart2Line[line2Chart[i]].push_back(i);
             if(!it->second.isRightAxis)
@@ -874,8 +917,23 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
             mTags.push_back(new AxisTag(mGraphs[i]->valueAxis()));
             mTags[i]->setPen(mGraphs[i]->pen());
             mTags[i]->setText("0");
+
+            dataEdit.push_back(new QLineEdit());
+            dataEdit[i]->setMaximumWidth(70);
+            dataEdit[i]->setReadOnly(true);
+            dataEdit[i]->setText("NULL");
+
+            dataLabel.push_back(new QLabel());
+            dataLabel[i]->setMinimumHeight(20);
+            dataLabel[i]->setText(mGraphs[i]->name());
+            dataLabel[i]->setFont(QFont("Microsoft YaHei", 9, QFont::Normal,false));
+
+            ui->lineLayout->addWidget(dataEdit[i]);
+            ui->labelLayout->addWidget(dataLabel[i]);
         }
     }
+    ui->lineLayout->addStretch();
+    ui->labelLayout->addStretch();
     for(int i=0;i<totalCharts;i++)
     {
         fixedRange.push_back({-10,10,-10,10});

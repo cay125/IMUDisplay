@@ -53,6 +53,7 @@ public:
 
 private:
     void initStates();
+    void removeStrech(QBoxLayout* layout);
     fileSaver *saver;
     dataManagerWindow * managerWindow;
     Ui::MainWindow *ui;
@@ -69,12 +70,13 @@ private:
     int totalCharts=3;
     bool isFixedRange=false;
     int totallines=22;
+    int totalData=31;
+    std::map<int,int> line2Data;
     QVector<int> PData;
     QVector<long long> PDataBuffer;
     QVector<QVector<double>> OriginalDataVec;
     QVector<QVector<double>> PDataVec;
     QVector<QCPGraph*> mGraphs;
-    std::map<QString,int> findLineByName;
     std::map<int,int> line2Chart;
     QVector<QVector<int>> chart2Line;
     QVector<QString> SeriesUnit;
