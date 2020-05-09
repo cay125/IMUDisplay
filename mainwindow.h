@@ -54,10 +54,8 @@ public:
 private:
     void initStates();
     fileSaver *saver;
-    allDataWindow *allwindow;
     dataManagerWindow * managerWindow;
     Ui::MainWindow *ui;
-    QPalette p;
     QVector<QCustomPlot*> customplot;
     QVector<AxisTag*> mTags;
     QVector<AxisTag*> mAveTags;
@@ -91,12 +89,6 @@ private:
     double gra_accel=1;
     QVector<onlineVarian*> onlineVar;
     stylePalette *linePalette;
-    fftWindow *fftwin;
-    fftLoader *fftloader;
-    QThread *fft_thread;
-    QVector<QVector<double>> fftData;
-    QVector<bool> isfftTransfer;
-    QVector<bool> isShowALLData;
 private slots:
     void timerSlot_data();
     void timerSlot_customplot();
@@ -119,8 +111,6 @@ private slots:
 
     void on_speedSlider_valueChanged(int value);
     void paletteColorSlot(QColor);
-    void addFFTplotSlot();
-    void addAllDataSlot();
     void isFixedRangeSlot(bool);
 
     void on_btnManager_clicked();

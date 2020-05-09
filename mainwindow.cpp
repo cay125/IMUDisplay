@@ -3,11 +3,12 @@
 #include "serialport.h"
 #include <QSerialPortInfo>
 #include "switchcontrol.h"
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status),ui(new Ui::MainWindow),timer_plot(new QTimer),timer_data(new QTimer),linePalette(new stylePalette),fftwin(new fftWindow(parent)),fftloader(new fftLoader()),allwindow(new allDataWindow(parent)),managerWindow(new dataManagerWindow(parent))
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status),ui(new Ui::MainWindow),timer_plot(new QTimer),timer_data(new QTimer),linePalette(new stylePalette),managerWindow(new dataManagerWindow(parent))
 {
     //showMaximized();
     //set white background color
     ui->setupUi(this);
+    QPalette p;
     p.setColor(QPalette::Background,Qt::white);
     setAutoFillBackground(true);
     setPalette(p);
@@ -21,9 +22,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     });
 
     qDebug()<< "mainwindow work on thread id = " << QThread::currentThreadId();
-    fft_thread=new QThread();
-    fftloader->moveToThread(fft_thread);
-    fft_thread->start();
     for(int i=0;i<totallines;i++)
     {
         onlineVar.push_back(new onlineVarian());
@@ -215,19 +213,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     PDataVec.resize(totallines);
     PDataBuffer.resize(totallines);
     OriginalDataVec.resize(totallines);
-    fftData.resize(totallines);
-    for(int i=0;i<totallines;i++)
-    {
-        isfftTransfer.push_back(false);
-        isShowALLData.push_back(false);
-    }
 
     connect(timer_plot, SIGNAL(timeout()), this, SLOT(timerSlot_customplot()));
     connect(timer_data, SIGNAL(timeout()), this, SLOT(timerSlot_data()));
     connect(linePalette,SIGNAL(signal_changeBackColor(QColor)),this,SLOT(paletteColorSlot(QColor)));
-    connect(this, SIGNAL(FFTstart_signal(QVariant,QString)), fftloader,SLOT(FFTstart_slot(QVariant,QString)));
-    connect(fftloader,SIGNAL(FFTfinished_signal(QVariant,QString)),fftwin,SLOT(FFTfinished_slot(QVariant,QString)));
-    connect(fftwin,SIGNAL(fftNum_signal(int)),fftloader,SLOT(fftNum_slot(int)));
     connect(managerWindow,&dataManagerWindow::dataManagerSignal,this,&MainWindow::dataManagerSlot);
 
     timer_data->setInterval(static_cast<int>((1000.0/flashRate)));
@@ -347,8 +336,6 @@ void MainWindow::contextMenuRequest(QPoint pos)
             }
         }
         menu->addAction("Change chart color",linePalette,SLOT(slot_OpenColorPad()));
-        menu->addAction((isShowALLData[plotSelect] && allwindow->isVisible())? "Hide whole length signal" : "Show whole length signal", this, SLOT(addAllDataSlot()));
-        menu->addAction((isfftTransfer[plotSelect] && fftwin->isVisible())? "Hide signal FFT" : "Show signal FFT",this,SLOT(addFFTplotSlot()));
         menu->addAction("Move to top left", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignLeft));
         menu->addAction("Move to top center", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignHCenter));
         menu->addAction("Move to top right", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignRight));
@@ -467,23 +454,10 @@ void MainWindow::timerSlot_customplot()
             for(int j=1;j<=len;j++)
             {
                 xPos.append(j*dx_len/len+lastX[cnt]);
-                fftData[cnt].append(dataProcess[cnt][j-1]);
-                if(fftData[cnt].size()>=fftloader->N)
-                {
-                    if(isfftTransfer[cnt])
-                    {
-                        QVariant dataTransfer;
-                        dataTransfer.setValue(fftData[cnt]);
-                        emit FFTstart_signal(dataTransfer,mGraphs[cnt]->name());
-                    }
-                    fftData[cnt].clear();
-                }
             }
             mGraphs[cnt]->addData(xPos,dataProcess[cnt]);
             onlineVar[cnt]->addData(dataProcess[cnt]);
             //onlineVarToTxt[cnt]->addData(PDataVec[cnt]);
-            if(isShowALLData[cnt])
-                allwindow->transferData(dataProcess[cnt],mGraphs[cnt]->name());
         }
         else
         {
@@ -556,7 +530,6 @@ void MainWindow::timerSlot_customplot()
     for(int cnt=0;cnt<dataProcess.size();cnt++)
         dataProcess[cnt].clear();
 
-    //allwindow->replotGraphs();
 }
 void MainWindow::on_btnOpenGL_clicked()
 {
@@ -640,7 +613,6 @@ void MainWindow::on_btnStart_clicked()
         receive_data_cnt_from_socket=0;
         for(int i=0;i<totalCharts;i++)
         {
-            fftData[i].clear();
             customplot[i]->xAxis->setRange(0,XRANGE);
             customplot[i]->yAxis->setRange(fixedRange[i][0],fixedRange[i][1]);
             customplot[i]->yAxis2->setRange(fixedRange[i][2],fixedRange[i][3]);
@@ -729,10 +701,6 @@ void MainWindow::paletteColorSlot(QColor color)
     QPen pen(color);
     mGraphs[plotSelect]->setPen(pen);
     mTags[plotSelect]->setPen(pen);
-    if(isfftTransfer[plotSelect])
-        fftwin->changePlotPen(mGraphs[plotSelect]->name(),pen);
-    if(isShowALLData[plotSelect])
-        allwindow->changePlotPen(mGraphs[plotSelect]->name(),pen);
     QCPSelectionDecorator *decorator=new QCPSelectionDecorator();
     pen.setWidth(2);
     decorator->setPen(pen);
@@ -740,67 +708,8 @@ void MainWindow::paletteColorSlot(QColor color)
     if(status->isrunning==false)
         customplot[plotSelect]->replot();
 }
-void MainWindow::addFFTplotSlot()
-{
-    if(!isfftTransfer[plotSelect])
-    {
-        fftwin->addPlot(mGraphs[plotSelect]->name(), mGraphs[plotSelect]->pen(), 512);
-        isfftTransfer[plotSelect]=true;
-        fftwin->show();
-        fftwin->activateWindow();
-    }
-    else
-    {
-        if(fftwin->isVisible())
-        {
-            fftwin->removePlot(mGraphs[plotSelect]->name());
-            isfftTransfer[plotSelect]=false;
-        }
-        else
-        {
-            fftwin->show();
-        }
-    }
-}
-void MainWindow::addAllDataSlot()
-{
-    if(!isShowALLData[plotSelect])
-    {
-        allwindow->addPlot(mGraphs[plotSelect]->name(), mGraphs[plotSelect]->pen());
-        isShowALLData[plotSelect]=true;
-        allwindow->show();
-        allwindow->activateWindow();
-    }
-    else
-    {
-        if(allwindow->isVisible())
-        {
-            allwindow->removePlot(mGraphs[plotSelect]->name());
-            isShowALLData[plotSelect]=false;
-        }
-        else
-        {
-            allwindow->show();
-        }
-    }
-    QVector<double> data = saver->getdataFromTxt(plotSelect);
-    allwindow->initData(data,mGraphs[plotSelect]->name());
-}
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-//    QFile fileToColor("configs.ini");
-//    fileToColor.open(QIODevice::WriteOnly | QIODevice::Text);
-//    QTextStream stream(&fileToColor);
-//    for(int i=0;i<3;i++)
-//    {
-//        QColor color=mGraphs[i]->pen().color();
-//        int red=color.red(),green=color.green(),blue=color.blue();
-//        stream<<red<<" "<<green<<" "<<blue<<endl;
-//    }
-//    stream<<ui->speedSlider->value()<<endl;
-//    fileToColor.close();
-    fftwin->close();
-    allwindow->close();
     managerWindow->close();
 }
 void MainWindow::initStates()
@@ -837,62 +746,6 @@ void MainWindow::initStates()
 }
 void MainWindow::receiveDataFromSocketSlot()
 {
-    /*
-    auto data=tcpClient->readAll();
-    static std::pair<int,recieveType> state(0, recieveType::angle);
-    static QByteArray pointData;
-    for(int i=0;i<data.size();i++)
-    {
-        uchar num=static_cast<uchar>(data.at(i));
-        if(state.first==0 && num==0x55)
-        {
-            pointData.clear();
-            state.first=1;
-        }
-        else if(state.first==1)
-        {
-            if(num!=0x52 && num!=0x53)
-            {
-                state.first=0;
-            }
-            else if(num==0x52)
-            {
-                state.first++;
-                pointData.append(recieveType::gyro);
-                state.second=recieveType::gyro;
-            }
-            else if(num==0x53)
-            {
-                state.first++;
-                pointData.append(recieveType::angle);
-                state.second=recieveType::angle;
-            }
-        }
-        else if(state.first>1)
-        {
-            state.first++;
-            pointData.append(data.at(i));
-            if(state.first>=8)
-            {
-                state.first=0;
-                if(state.second==recieveType::angle)
-                {
-                    int16_t bottom_angleX=0,bottom_angleY=0,bottom_angleZ=0;
-                    bottom_angleX=static_cast<int16_t>(((static_cast<uint8_t>(pointData.at(2))<<8)|static_cast<uint8_t>(pointData.at(1))));
-                    bottom_angleY=static_cast<int16_t>(((static_cast<uint8_t>(pointData.at(4))<<8)|static_cast<uint8_t>(pointData.at(3))));
-                    bottom_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(pointData.at(6))<<8)|static_cast<uint8_t>(pointData.at(5))));
-                    OriginalDataVec[2].push_back(bottom_angleX/32768.0*180.0);
-                    OriginalDataVec[3].push_back(bottom_angleY/32768.0*180.0);
-                    PData[2]=bottom_angleX;
-                    PData[3]=bottom_angleY;
-                    for(int i=2;i<4;i++)
-                        PDataBuffer[i]+=PData[i];
-                    receive_data_cnt_from_socket++;
-                }
-            }
-        }
-    }
-    */
     auto data=tcpClient->readAll();
     int dataSize=1+6+6+12+12;
     int datalen=data.length()/dataSize;
