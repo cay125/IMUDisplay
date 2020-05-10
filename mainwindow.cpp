@@ -56,6 +56,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),status(new Status)
     {
         dataEdit.push_back(new QLineEdit());
         dataEdit[i]->setMaximumWidth(70);
+        dataEdit[i]->setMaximumHeight(20);
         dataEdit[i]->setReadOnly(true);
         dataEdit[i]->setText("NULL");
 
@@ -883,7 +884,7 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
         }
         else if(it->first=="Real gyro")
         {sName={"gyroX","gyroY","gyroZ"};dataIndexStart=28;}
-        else if(it->first=="Ref Leg Speed")
+        else if(it->first=="Ref Leg Vel")
         {
             for(int i=0;i<6;i++)
                 sName.push_back("Ref Leg Vel "+QString::number(i));
@@ -920,6 +921,7 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
 
             dataEdit.push_back(new QLineEdit());
             dataEdit[i]->setMaximumWidth(70);
+            dataEdit[i]->setMaximumHeight(20);
             dataEdit[i]->setReadOnly(true);
             dataEdit[i]->setText("NULL");
 

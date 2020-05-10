@@ -12,7 +12,7 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
     p.setColor(QPalette::Background,Qt::white);
     setAutoFillBackground(true);
     setPalette(p);
-    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Real gyro","Ref Leg Speed"};
+    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Real gyro","Ref Leg Vel"};
     for(int i=0;i<totalNum;i++)
     {
         QHBoxLayout *Hlayout=new QHBoxLayout(this);
