@@ -95,8 +95,7 @@ void SerialPort::handle_data()
             if(state.first>=8)
             {
                 state.first=0;
-                if(state.second==recieveType::angle)
-                    emit receiveDataSignal(pointData);
+                emit receiveDataSignal(pointData);
 //                if(!first_flag)
 //                {
 //                    first_flag=true;

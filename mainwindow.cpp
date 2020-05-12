@@ -384,18 +384,27 @@ void MainWindow::receiveDataSlot(QByteArray data)
         top_angleX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2))<<8)|static_cast<uint8_t>(data.at(1))));
         top_angleY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4))<<8)|static_cast<uint8_t>(data.at(3))));
         top_angleZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6))<<8)|static_cast<uint8_t>(data.at(5))));
+        OriginalDataVec[0].push_back(top_angleX/32768.0*180.0);
+        OriginalDataVec[1].push_back(top_angleY/32768.0*180.0);
     }
-    OriginalDataVec[0].push_back(top_angleX/32768.0*180.0);
-    OriginalDataVec[1].push_back(top_angleY/32768.0*180.0);
-    QVector<QString> dataToTxt;
-    dataToTxt.append(QString::number(OriginalDataVec[0].back(),'f',3));
-    dataToTxt.append(QString::number(OriginalDataVec[1].back(),'f',3));
-    saver->writeText(dataToTxt);
-    PData[0]=top_angleX;
-    PData[1]=top_angleY;
-    for(int i=0;i<2;i++)
-        PDataBuffer[i]+=PData[i];
-    receive_data_cnt++;
+    else if(type==recieveType::gyro)
+    {
+        double gyroX=0,gyroY=0,gyroZ=0;
+        gyroX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(2))<<8)|static_cast<uint8_t>(data.at(1))))/32768.0*2000.0;
+        gyroY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(4))<<8)|static_cast<uint8_t>(data.at(3))))/32768.0*2000.0;
+        gyroZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(6))<<8)|static_cast<uint8_t>(data.at(5))))/32768.0*2000.0;
+        OriginalDataVec[30].push_back(gyroX);
+        OriginalDataVec[31].push_back(gyroY);
+    }
+//    QVector<QString> dataToTxt;
+//    dataToTxt.append(QString::number(OriginalDataVec[0].back(),'f',3));
+//    dataToTxt.append(QString::number(OriginalDataVec[1].back(),'f',3));
+//    saver->writeText(dataToTxt);
+//    PData[0]=top_angleX;
+//    PData[1]=top_angleY;
+//    for(int i=0;i<2;i++)
+//        PDataBuffer[i]+=PData[i];
+//    receive_data_cnt++;
 }
 void MainWindow::ReadError(QAbstractSocket::SocketError)
 {
@@ -786,7 +795,7 @@ void MainWindow::receiveDataFromSocketSlot()
             double gyroZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(67))<<8)|static_cast<uint8_t>(data.at(66))))/32768.0*2000.0;
             OriginalDataVec[28].push_back(gyroX);
             OriginalDataVec[29].push_back(gyroY);
-            OriginalDataVec[30].push_back(gyroZ);
+            //OriginalDataVec[30].push_back(gyroZ);
             PData[2]=bottom_angleX;
             PData[3]=bottom_angleY;
             for(int j=2;j<4;j++)
@@ -882,8 +891,10 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
                 sName.push_back("Real Legs "+QString::number(i));
             dataIndexStart=10;
         }
-        else if(it->first=="Real gyro")
-        {sName={"gyroX","gyroY","gyroZ"};dataIndexStart=28;}
+        else if(it->first=="Top gyro")
+        {sName={"top gyroX","top gyroY"};dataIndexStart=30;}
+        else if(it->first=="Bottom gyro")
+        {sName={"bottom gyroX","bottom gyroY"};dataIndexStart=28;}
         else if(it->first=="Ref Leg Vel")
         {
             for(int i=0;i<6;i++)
@@ -908,7 +919,7 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
             }
             mGraphs.push_back(customplot[line2Chart[i]]->graph());
             mGraphs[i]->setName(sName[i-currentLineSize]);
-            mGraphs[i]->setPen(pen[(cnt[line2Chart[i-currentLineSize]]++)%pen.size()]);
+            mGraphs[i]->setPen(pen[(cnt[line2Chart[i]]++)%pen.size()]);
             QCPSelectionDecorator *decorator=new QCPSelectionDecorator();
             QPen tpen;
             tpen.setColor(mGraphs[i]->pen().color());
