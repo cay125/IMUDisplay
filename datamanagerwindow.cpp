@@ -12,7 +12,8 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
     p.setColor(QPalette::Background,Qt::white);
     setAutoFillBackground(true);
     setPalette(p);
-    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Top gyro","Bottom gyro","Ref Leg Vel"};
+    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Top gyro","Bottom gyro","Ref Leg Vel","Total Out"};
+    int totalNum=name.length();
     for(int i=0;i<totalNum;i++)
     {
         QHBoxLayout *Hlayout=new QHBoxLayout(this);
@@ -46,7 +47,7 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
     ui->mainLayout->setRowStretch(totalNum,1);
     btnBox=new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     ui->mainLayout->addWidget(btnBox,totalNum+1,0);
-    connect(btnBox,&QDialogButtonBox::accepted,this,[this]()
+    connect(btnBox,&QDialogButtonBox::accepted,this,[this,totalNum]()
     {
         int cnt=0;
         std::map<QString,dataManager> data;

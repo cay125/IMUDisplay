@@ -789,6 +789,7 @@ void MainWindow::receiveDataFromSocketSlot()
                 OriginalDataVec[j+10].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+13+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+14+i*dataSize))));
                 OriginalDataVec[j+16].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+25+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+26+i*dataSize))));
                 OriginalDataVec[j+22].push_back(static_cast<int32_t>(static_cast<uint8_t>(data.at(j*4+37+i*dataSize))<<24|static_cast<uint8_t>(data.at(j*4+38+i*dataSize))<<16|static_cast<uint8_t>(data.at(j*4+39+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*4+40+i*dataSize))));
+                OriginalDataVec[j+32].push_back(OriginalDataVec[j+4].back()+OriginalDataVec[j+22].back()/200*0.25);
             }
             double gyroX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(63))<<8)|static_cast<uint8_t>(data.at(62))))/32768.0*2000.0;
             double gyroY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(65))<<8)|static_cast<uint8_t>(data.at(64))))/32768.0*2000.0;
@@ -900,6 +901,12 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
             for(int i=0;i<6;i++)
                 sName.push_back("Ref Leg Vel "+QString::number(i));
             dataIndexStart=22;
+        }
+        else if(it->first=="Total Out")
+        {
+            for(int i=0;i<6;i++)
+                sName.push_back("Total Out"+QString::number(i));
+            dataIndexStart=32;
         }
         totallines+=sName.size();
         for(int i=currentLineSize;i<currentLineSize+sName.size();i++)

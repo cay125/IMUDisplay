@@ -34,7 +34,6 @@ private:
     QVector<QRadioButton*> radios;
     QVector<QSpinBox*> spinIntBoxs;
     QDialogButtonBox* btnBox;
-    int totalNum=8;
 signals:
     void dataManagerSignal(std::map<QString,dataManager>);
 };
