@@ -770,7 +770,7 @@ void MainWindow::initStates()
 void MainWindow::receiveDataFromSocketSlot()
 {
     auto data=tcpClient->readAll();
-    int dataSize=1+6+6+12+12+24+1+6;
+    int dataSize=1+6+6+12+12+24+1+6+18+2+2+2;
     int datalen=data.length()/dataSize;
     for(int i=0;i<datalen;i++)
     {
@@ -789,13 +789,24 @@ void MainWindow::receiveDataFromSocketSlot()
                 OriginalDataVec[j+10].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+13+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+14+i*dataSize))));
                 OriginalDataVec[j+16].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+25+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+26+i*dataSize))));
                 OriginalDataVec[j+22].push_back(static_cast<int32_t>(static_cast<uint8_t>(data.at(j*4+37+i*dataSize))<<24|static_cast<uint8_t>(data.at(j*4+38+i*dataSize))<<16|static_cast<uint8_t>(data.at(j*4+39+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*4+40+i*dataSize))));
-                OriginalDataVec[j+32].push_back(OriginalDataVec[j+4].back()+OriginalDataVec[j+22].back()/200*0.25);
+                OriginalDataVec[j+22].back()/=200;
+                OriginalDataVec[j+22].back()*=0.25;
+                OriginalDataVec[j+32].push_back(OriginalDataVec[j+4].back()+OriginalDataVec[j+22].back());
             }
             double gyroX=static_cast<int16_t>(((static_cast<uint8_t>(data.at(63))<<8)|static_cast<uint8_t>(data.at(62))))/32768.0*2000.0;
             double gyroY=static_cast<int16_t>(((static_cast<uint8_t>(data.at(65))<<8)|static_cast<uint8_t>(data.at(64))))/32768.0*2000.0;
             double gyroZ=static_cast<int16_t>(((static_cast<uint8_t>(data.at(67))<<8)|static_cast<uint8_t>(data.at(66))))/32768.0*2000.0;
             OriginalDataVec[28].push_back(gyroX);
             OriginalDataVec[29].push_back(gyroY);
+            for(int j=0;j<3;j++)
+            {
+                OriginalDataVec[j+38].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+68+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+69+i*dataSize))));
+                OriginalDataVec[j+41].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+74+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+75+i*dataSize))));
+                OriginalDataVec[j+44].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(j*2+80+i*dataSize))<<8|static_cast<uint8_t>(data.at(j*2+81+i*dataSize))));
+            }
+            OriginalDataVec[47].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(86+i*dataSize))<<8|static_cast<uint8_t>(data.at(87+i*dataSize))));
+            OriginalDataVec[48].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(88+i*dataSize))<<8|static_cast<uint8_t>(data.at(89+i*dataSize))));
+            OriginalDataVec[49].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(90+i*dataSize))<<8|static_cast<uint8_t>(data.at(91+i*dataSize))));
             //OriginalDataVec[30].push_back(gyroZ);
             PData[2]=bottom_angleX;
             PData[3]=bottom_angleY;
@@ -907,6 +918,31 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
             for(int i=0;i<6;i++)
                 sName.push_back("Total Out"+QString::number(i));
             dataIndexStart=32;
+        }
+        else if(it->first=="Acc")
+        {
+            sName={"AccX","AccY","AccZ"};
+            dataIndexStart=38;
+        }
+        else if(it->first=="Vel")
+        {
+            sName={"VelX","VelY","VelZ"};
+            dataIndexStart=41;
+        }
+        else if(it->first=="Dis")
+        {
+            sName={"DisX","DisY","DisZ"};
+            dataIndexStart=44;
+        }
+        else if(it->first=="orientAccZ")
+        {
+            sName={"orientAccZ","orientAccZ_AfterFilter"};
+            dataIndexStart=47;
+        }
+        else if(it->first=="varian")
+        {
+            sName={"accZvarian"};
+            dataIndexStart=49;
         }
         totallines+=sName.size();
         for(int i=currentLineSize;i<currentLineSize+sName.size();i++)
