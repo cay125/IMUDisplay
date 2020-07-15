@@ -70,7 +70,7 @@ private:
     int totalCharts=3;
     bool isFixedRange=false;
     int totallines=22;
-    int totalData=32+6+9+1+1+1;
+    int totalData=32+6+9+1+1+1+2+2+3+1;
     std::map<int,int> line2Data;
     QVector<int> PData;
     QVector<long long> PDataBuffer;

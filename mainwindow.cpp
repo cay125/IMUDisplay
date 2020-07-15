@@ -554,6 +554,7 @@ void MainWindow::on_btnOpenGL_clicked()
 {
     if(ui->btnOpenGL->text()=="Connect Host")
     {
+        tcpClient->bind(9002);
         tcpClient->connectToHost(ui->GraEdit->text(), 8088);
         if (tcpClient->waitForConnected(1000))
         {
@@ -770,7 +771,7 @@ void MainWindow::initStates()
 void MainWindow::receiveDataFromSocketSlot()
 {
     auto data=tcpClient->readAll();
-    int dataSize=1+6+6+12+12+24+1+6+18+2+2+2;
+    int dataSize=1+6+6+12+12+24+1+6+18+2+2+2+4+4+6+4;
     int datalen=data.length()/dataSize;
     for(int i=0;i<datalen;i++)
     {
@@ -807,6 +808,16 @@ void MainWindow::receiveDataFromSocketSlot()
             OriginalDataVec[47].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(86+i*dataSize))<<8|static_cast<uint8_t>(data.at(87+i*dataSize))));
             OriginalDataVec[48].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(88+i*dataSize))<<8|static_cast<uint8_t>(data.at(89+i*dataSize))));
             OriginalDataVec[49].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(90+i*dataSize))<<8|static_cast<uint8_t>(data.at(91+i*dataSize))));
+            OriginalDataVec[50].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(92+i*dataSize))<<8|static_cast<uint8_t>(data.at(93+i*dataSize))));
+            OriginalDataVec[51].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(94+i*dataSize))<<8|static_cast<uint8_t>(data.at(95+i*dataSize))));
+            OriginalDataVec[52].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(96+i*dataSize))<<8|static_cast<uint8_t>(data.at(97+i*dataSize))));
+            OriginalDataVec[53].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(98+i*dataSize))<<8|static_cast<uint8_t>(data.at(99+i*dataSize))));
+            OriginalDataVec[54].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(100+i*dataSize))<<8|static_cast<uint8_t>(data.at(101+i*dataSize))));
+            OriginalDataVec[55].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(102+i*dataSize))<<8|static_cast<uint8_t>(data.at(103+i*dataSize))));
+            OriginalDataVec[56].push_back(static_cast<int16_t>(static_cast<uint8_t>(data.at(104+i*dataSize))<<8|static_cast<uint8_t>(data.at(105+i*dataSize))));
+            union {float f;uint32_t d;};
+            d=static_cast<uint32_t>(static_cast<uint8_t>(data.at(106+i*dataSize))<<24|static_cast<uint8_t>(data.at(107+i*dataSize))<<16|static_cast<uint8_t>(data.at(108+i*dataSize))<<8|static_cast<uint8_t>(data.at(109+i*dataSize)));
+            OriginalDataVec[57].push_back(f);
             //OriginalDataVec[30].push_back(gyroZ);
             PData[2]=bottom_angleX;
             PData[3]=bottom_angleY;
@@ -943,6 +954,36 @@ void MainWindow::dataManagerSlot(std::map<QString,dataManager> data)
         {
             sName={"accZvarian"};
             dataIndexStart=49;
+        }
+        else if(it->first=="VelMSE")
+        {
+            sName={"VelMSE"};
+            dataIndexStart=50;
+        }
+        else if(it->first=="DisMSE")
+        {
+            sName={"DisMSE"};
+            dataIndexStart=51;
+        }
+        else if(it->first=="VelOther")
+        {
+            sName={"VelOther"};
+            dataIndexStart=52;
+        }
+        else if(it->first=="DisOther")
+        {
+            sName={"DisOther"};
+            dataIndexStart=53;
+        }
+        else if(it->first=="Trans")
+        {
+            sName={"zTrans","xTrans","yTrans"};
+            dataIndexStart=54;
+        }
+        else if(it->first=="ZTransVision")
+        {
+            sName={"zTransVision"};
+            dataIndexStart=57;
         }
         totallines+=sName.size();
         for(int i=currentLineSize;i<currentLineSize+sName.size();i++)

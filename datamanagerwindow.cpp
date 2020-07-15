@@ -12,7 +12,7 @@ dataManagerWindow::dataManagerWindow(QWidget *parent) : QMainWindow(parent), ui(
     p.setColor(QPalette::Background,Qt::white);
     setAutoFillBackground(true);
     setPalette(p);
-    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Top gyro","Bottom gyro","Ref Leg Vel","Total Out","Acc","Vel","Dis","orientAccZ","varian"};
+    QVector<QString> name={"Top IMU","Bottom IMU","PID out","Ref Legs","Real Legs","Top gyro","Bottom gyro","Ref Leg Vel","Total Out","Acc","Vel","Dis","orientAccZ","varian","VelMSE","DisMSE","VelOther","DisOther","Trans","ZTransVision"};
     int totalNum=name.length();
     for(int i=0;i<totalNum;i++)
     {
